@@ -6,13 +6,23 @@ using UnityEngine;
 public class PlayerMotor : MonoBehaviour
 {
     [SerializeField]
-    Camera camera;
+    Camera myCamera;
 
     private Vector3 velocity = Vector3.zero;
     private Vector3 rotation = Vector3.zero;
-
+    bool isJumpPressed = false;
     private Rigidbody rb;
-    private Vector3 rotationCamera = Vector3.zero;
+
+    private float rotationCameraX = 0f;
+
+    // Important to keep Track of the curretnt rotation etc otherwise its always 0
+    private float currentCameraRotation = 0f;
+
+    [SerializeField]
+    private float cameraRotationLimit = 85f;
+
+    [SerializeField]
+    private float jumpForce = 0.2f;
 
     void Start()
     {
@@ -30,9 +40,14 @@ public class PlayerMotor : MonoBehaviour
         this.rotation = rotation;
     }
 
-    public void RotateCamera(Vector3 rotationCamera)
+    public void RotateCamera(float rotationCameraX)
     {
-        this.rotationCamera = rotationCamera;
+        this.rotationCameraX = rotationCameraX;
+    }
+
+    public void Jump(bool isJumpPressed)
+    {
+        this.isJumpPressed = isJumpPressed;
     }
 
     //Run every physics iteration
@@ -45,9 +60,14 @@ public class PlayerMotor : MonoBehaviour
     private void PerformRotation()
     {
         rb.MoveRotation(rb.rotation * Quaternion.Euler(rotation));
-        if (camera != null)
+        if (myCamera != null)
         {
-            camera.transform.Rotate(-rotationCamera);
+            // Rotation not clampable 
+            //camera.transform.Rotate(-rotationCamera);.
+
+            currentCameraRotation -= rotationCameraX;
+            currentCameraRotation = Mathf.Clamp(currentCameraRotation, -cameraRotationLimit, cameraRotationLimit);
+            myCamera.transform.localEulerAngles = new Vector3(currentCameraRotation, 0f, 0f);
         }
     }
 
@@ -57,6 +77,13 @@ public class PlayerMotor : MonoBehaviour
         if (velocity != Vector3.zero)
         {
             rb.MovePosition(rb.position + velocity * Time.fixedDeltaTime);
+        }
+
+        if (isJumpPressed && rb.velocity.y == 0)
+        {
+            Vector3 jumpForce = Vector3.up * this.jumpForce;
+            rb.AddForce(jumpForce, ForceMode.VelocityChange);
+            isJumpPressed = false;
         }
     }
 }
